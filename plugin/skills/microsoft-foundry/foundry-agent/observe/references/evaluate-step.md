@@ -4,7 +4,7 @@
 
 - Agent deployed and running
 - Evaluators configured (from [Step 1](deploy-and-setup.md) or `evaluators/` folder)
-- Local test dataset available (from `datasets/` or will use synthetic data)
+- Local test dataset available (from `datasets/`)
 
 ## Run Evaluation
 
@@ -21,9 +21,9 @@ Use **`evaluation_agent_batch_eval_create`** to run evaluators against the agent
 
 ### Test Data Options
 
-**Preferred — local dataset:** Read JSONL from `datasets/` and pass via `inputData` (array of objects with `query` and optionally `context`, `ground_truth`). Provides reproducibility and version control.
+**Preferred — local dataset:** Read JSONL from `datasets/` and pass via `inputData` (array of objects with `query` and optionally `context`, `ground_truth`). Provides reproducibility, version control, and reviewability. Always use this when `datasets/` contains files.
 
-**Fallback — server-side synthetic data:** Set `generateSyntheticData=true` AND provide `generationModelDeploymentName`. Optionally set `samplesCount` (default 50) and `generationPrompt` with the agent's instructions.
+**Fallback only — server-side synthetic data:** Set `generateSyntheticData=true` AND provide `generationModelDeploymentName`. Only use when no local dataset exists and the user explicitly requests it. Optionally set `samplesCount` (default 50) and `generationPrompt` with the agent's instructions.
 
 ### Additional Parameters
 

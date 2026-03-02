@@ -248,9 +248,11 @@ Use **`agent_get`** (or local `agent.yaml`) to understand the agent's purpose an
 
 Use **`model_deployment_get`** to find a suitable model (e.g., `gpt-4o`) for quality evaluators.
 
-### 4. Compose Generation Prompt
+### 4. Generate Local Test Dataset
 
-Build a `generationPrompt` from the agent's instructions describing purpose, capabilities, and tools so generated queries are realistic.
+Use the identified LLM deployment to generate realistic test queries based on the agent's instructions and tool capabilities. Save to `datasets/<agent-name>-test.jsonl` with each line containing at minimum a `query` field (optionally `context`, `ground_truth`).
+
+> ⚠️ **Prefer local dataset generation.** Generate test queries locally and save to `datasets/*.jsonl` rather than using `generateSyntheticData=true` on the eval API. Local datasets provide reproducibility, version control, and can be reviewed before running evals.
 
 ### 5. Persist Artifacts
 

@@ -40,7 +40,7 @@ USE FOR: evaluate my agent, run an eval, test my agent, check agent quality, run
 ## Loop Overview
 
 ```
-1. Auto-setup evaluators & synthetic dataset
+1. Auto-setup evaluators & local test dataset
    → ask: "Run an evaluation to identify optimization opportunities?"
 2. Evaluate (batch eval run)
 3. Download & cluster failures
