@@ -68,6 +68,7 @@ Each cycle makes the test suite harder and more representative. Production failu
 5. **Persist artifacts.** Save datasets to `datasets/`, evaluation results to `results/`, and track lineage in `datasets/manifest.json`.
 6. **Confirm before overwriting.** If a dataset version already exists, warn the user and ask for confirmation before replacing.
 7. **Never upload datasets to cloud storage.** Do not use blob upload, SAS URLs, or `evaluation_dataset_create`. Always persist datasets locally and reference them via `inputData` when running evaluations.
+8. **Never remove dataset rows or weaken evaluators to recover scores.** Score drops after a dataset update are expected — harder tests expose real gaps. Optimize the agent for new failure patterns; do not shrink the test suite.
 
 ## Related Skills
 

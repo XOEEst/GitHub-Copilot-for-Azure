@@ -103,6 +103,38 @@ Track all dataset versions, tags, and lineage in `datasets/manifest.json`:
 5. **Tag appropriately**: Apply `baseline`, `prod`, or other tags as needed
 6. **Deprecate old**: Optionally mark previous versions as `deprecated`
 
+> ⚠️ **DO NOT stop here.** After creating a new dataset version, continue to the Dataset Update Loop below.
+
+## Dataset Update Loop — Eval → Analyze → Optimize → Re-Eval
+
+When a dataset is updated (new rows, better coverage, new failure modes), run this loop to validate the agent against the harder test suite:
+
+```
+[1] Eval with new dataset (v2) using same agent version
+    │
+    ▼
+[2] Compare: eval on v1 vs eval on v2 (same agent, different datasets)
+    │
+    ▼
+[3] Analyze score changes — expect some drops (harder tests ≠ worse agent)
+    │
+    ▼
+[4] Optimize agent prompt based on NEW failure patterns only
+    │
+    ▼
+[5] Re-eval optimized agent on v2 dataset → compare to pre-optimization
+    │
+    ▼
+[6] If satisfied → tag v2 as `prod`, archive v1
+```
+
+### ⛔ Guardrails for This Loop
+
+- **Never remove dataset rows to recover scores.** If eval scores drop after a dataset update, the dataset is likely exposing real gaps. Removing hard cases defeats the purpose.
+- **Never weaken evaluators to recover scores.** Do not lower thresholds, remove evaluators, or switch to easier scoring when scores drop on an expanded dataset.
+- **Distinguish dataset difficulty from agent regression.** A score drop on a harder dataset is expected and healthy — it means test coverage improved. Only flag as regression when the same dataset + same evaluators produce worse scores on a new agent version.
+- **Optimize for NEW failure patterns only.** When optimizing the agent prompt after a dataset update, target the newly added test cases. Do not re-optimize for cases that were already passing.
+
 ## Comparing Versions
 
 To understand how a dataset evolved between versions:
