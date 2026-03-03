@@ -8,6 +8,8 @@ Extract production traces from App Insights using KQL, transform them into evalu
 - Agent name and project endpoint available in `.env`
 - Time range confirmed with user (default: last 7 days)
 
+> 💡 **Run all KQL queries** using **`monitor_resource_log_query`** (Azure MCP tool) against the App Insights resource. This is preferred over delegating to the `azure-kusto` skill.
+
 ## Overview
 
 ```
@@ -23,7 +25,7 @@ App Insights traces
 [3] Human Review (show candidates, let user approve/edit/reject)
     │
     ▼
-[4] Persist Dataset (evaluation_dataset_create or local JSONL)
+[4] Persist Dataset (local JSONL files)
 ```
 
 ## Step 1 — Choose a Harvest Template
@@ -227,18 +229,9 @@ Save approved candidates to `datasets/<agent-name>-<source>-v<N>.jsonl`:
 {"query": "What's the status of my order?", "response": "...", "ground_truth": "Order #12345 shipped on...", "metadata": {"source": "trace", "conversationId": "conv-def-456", "harvestRule": "latency"}}
 ```
 
-### Option B: Server-Side Dataset (For Foundry Portal Access)
+### ~~Option B: Server-Side Dataset~~ (Not Available)
 
-Use **`evaluation_dataset_create`** to upload to Azure:
-
-| Parameter | Required | Description |
-|-----------|----------|-------------|
-| `projectEndpoint` | ✅ | Azure AI Project endpoint |
-| `datasetContentUri` | ✅ | Azure Blob Storage SAS URL to the JSONL file |
-| `datasetName` | Optional | Name for the dataset (default: derived from URI) |
-| `datasetVersion` | Optional | Version identifier (default: `1.0`) |
-
-> 💡 **Tip:** Upload the local JSONL file to the project's default blob storage first, then pass the SAS URL to `evaluation_dataset_create`.
+> ⚠️ **Dataset upload MCP tools are not yet ready.** Skip `evaluation_dataset_create` for now. Always use local JSONL files (Option A) and pass data via `inputData` when running evaluations.
 
 ### Update Manifest
 

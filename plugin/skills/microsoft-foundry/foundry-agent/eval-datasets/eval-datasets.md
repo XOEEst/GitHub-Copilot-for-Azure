@@ -15,8 +15,9 @@ USE FOR: create dataset from traces, harvest traces into dataset, build test dat
 | Property | Value |
 |----------|-------|
 | MCP server | `foundry-mcp` |
-| Key MCP tools | `evaluation_dataset_create`, `evaluation_dataset_get`, `evaluation_get`, `evaluation_comparison_create`, `evaluation_comparison_get` |
-| Azure services | Application Insights (KQL), Azure Blob Storage |
+| Key MCP tools | `evaluation_dataset_get`, `evaluation_get`, `evaluation_comparison_create`, `evaluation_comparison_get` |
+| Azure services | Application Insights (via `monitor_resource_log_query`) |
+| ⚠️ Not available | `evaluation_dataset_create` (dataset upload MCP not ready — use local JSONL + `inputData`) |
 | Prerequisites | Agent deployed, App Insights connected (see [trace skill](../trace/trace.md)) |
 | Artifact paths | `datasets/`, `results/`, `evaluators/` |
 

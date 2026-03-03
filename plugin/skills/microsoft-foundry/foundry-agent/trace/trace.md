@@ -16,7 +16,8 @@ USE FOR: analyze agent traces, search agent conversations, find failing traces, 
 |----------|-------|
 | Data source | Application Insights (App Insights) |
 | Query language | KQL (Kusto Query Language) |
-| Related skills | `azure-kusto` (KQL execution), `troubleshoot` (container logs) |
+| Related skills | `troubleshoot` (container logs) |
+| Preferred query tool | `monitor_resource_log_query` (Azure MCP) — use for App Insights KQL queries |
 | OTel conventions | [GenAI Spans](https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-spans/), [Agent Spans](https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-agent-spans/) |
 
 ## Entry Points
@@ -45,7 +46,7 @@ USE FOR: analyze agent traces, search agent conversations, find failing traces, 
 If a `.env` file already exists, read it first and merge — do not overwrite existing values without confirmation.
 
 4. Confirm the App Insights resource with the user before querying
-5. Delegate KQL execution to the `azure-kusto` skill
+5. Use **`monitor_resource_log_query`** (Azure MCP tool) to execute KQL queries against the App Insights resource. This is preferred over delegating to the `azure-kusto` skill. Pass the App Insights resource ID and the KQL query directly.
 
 ## Behavioral Rules
 

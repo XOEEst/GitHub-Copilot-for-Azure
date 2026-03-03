@@ -6,7 +6,7 @@ This document identifies MCP tool capabilities that would significantly enhance 
 
 | Tool | Status | Gap |
 |------|--------|-----|
-| `evaluation_dataset_create` | ✅ Available | No auto-versioning; requires explicit version parameter |
+| `evaluation_dataset_create` | ⚠️ Not practical | Requires Blob Storage SAS URL upload — no file upload path from agent. Use local JSONL + `inputData` instead |
 | `evaluation_dataset_get` | ✅ Available | Cannot list all versions of a dataset; only gets by name+version |
 | `evaluation_agent_batch_eval_create` | ✅ Available | Full-featured |
 | `evaluation_dataset_batch_eval_create` | ✅ Available | Full-featured |

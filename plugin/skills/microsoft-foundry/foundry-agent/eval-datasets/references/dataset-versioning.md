@@ -43,24 +43,9 @@ datasets/support-bot-traces-v3.jsonl  ← pinned by filename
 
 Pass the contents via `inputData` parameter in **`evaluation_agent_batch_eval_create`**.
 
-### Server-Side Pinning
+### ~~Server-Side Pinning~~ (Not Available)
 
-When using **`evaluation_dataset_create`**, set `datasetVersion` explicitly:
-
-| Parameter | Required | Description |
-|-----------|----------|-------------|
-| `projectEndpoint` | ✅ | Azure AI Project endpoint |
-| `datasetContentUri` | ✅ | Blob storage SAS URL |
-| `datasetName` | Optional | Dataset name |
-| `datasetVersion` | Optional | Version string (e.g., `"3"`) |
-
-Use **`evaluation_dataset_get`** to retrieve a specific version:
-
-| Parameter | Required | Description |
-|-----------|----------|-------------|
-| `projectEndpoint` | ✅ | Azure AI Project endpoint |
-| `datasetName` | Optional | Dataset name to retrieve |
-| `datasetVersion` | Optional | Version to retrieve (default: `"1"`) |
+> ⚠️ **Dataset upload MCP tools are not yet ready.** Skip `evaluation_dataset_create` and `evaluation_dataset_get` for now. Use local JSONL files and pass data via `inputData` when running evaluations.
 
 ## Manifest File
 
