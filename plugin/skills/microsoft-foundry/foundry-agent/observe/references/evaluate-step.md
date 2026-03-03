@@ -48,4 +48,4 @@ When evaluation completes → proceed to [Step 3: Analyze Results](analyze-resul
 ## Reference
 
 - [Azure AI Foundry Cloud Evaluation](https://learn.microsoft.com/en-us/azure/ai-foundry/how-to/develop/cloud-evaluation)
-- [Built-in Evaluators](https://learn.microsoft.com/en-us/azure/ai-foundry/how-to/develop/evaluate-sdk#built-in-evaluators)
+- [Built-in Evaluators](https://learn.microsoft.com/en-us/azure/foundry/concepts/built-in-evaluators)
