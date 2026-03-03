@@ -7,7 +7,7 @@ Ready-to-use KQL templates for querying GenAI OpenTelemetry traces in Applicatio
 | App Insights Table | GenAI Data |
 |-------------------|------------|
 | `dependencies` | GenAI spans: LLM inference (`chat`), tool execution (`execute_tool`), agent invocation (`invoke_agent`) |
-| `requests` | Incoming HTTP requests to the agent endpoint |
+| `requests` | Incoming HTTP requests to the agent endpoint. For hosted agents, also carries `gen_ai.agent.name` (Foundry name) and `azure.ai.agentserver.*` attributes — **preferred entry point** for agent-name filtering |
 | `customEvents` | GenAI evaluation results (`gen_ai.evaluation.result`) — scores, labels, explanations |
 | `traces` | Log events, including GenAI events (input/output messages) |
 | `exceptions` | Error details with stack traces |
@@ -30,6 +30,8 @@ Stored in `customDimensions` on `dependencies` spans:
 | `gen_ai.response.finish_reasons` | Stop reasons | `["stop"]`, `["tool_calls"]` |
 | `error.type` | Error classification | `timeout`, `rate_limited`, `content_filter` |
 | `gen_ai.provider.name` | Provider | `azure.ai.openai`, `openai` |
+| `gen_ai.input.messages` | Full input messages (JSON array) — on `invoke_agent` spans | `[{"role":"user","parts":[{"type":"text","content":"..."}]}]` |
+| `gen_ai.output.messages` | Full output messages (JSON array) — on `invoke_agent` spans | `[{"role":"assistant","parts":[{"type":"text","content":"..."}]}]` |
 
 Stored in `customDimensions` on `customEvents` (name == `gen_ai.evaluation.result`):
 

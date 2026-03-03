@@ -107,7 +107,7 @@ dependencies
     errorCount = countif(success == false),
     totalInputTokens = sum(toint(customDimensions["gen_ai.usage.input_tokens"])),
     totalOutputTokens = sum(toint(customDimensions["gen_ai.usage.output_tokens"]))
-  by operation_Id
+  by operation_ParentId
 | order by startTime desc
 | take 50
 ```
