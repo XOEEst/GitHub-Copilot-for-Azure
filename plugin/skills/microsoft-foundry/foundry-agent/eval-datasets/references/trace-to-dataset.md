@@ -2,6 +2,11 @@
 
 Extract production traces from App Insights using KQL, transform them into evaluation dataset format, and persist as versioned datasets. This is the core workflow for turning real-world agent failures into reproducible test cases.
 
+## ⛔ Do NOT
+
+- Do NOT upload datasets to blob storage or call `evaluation_dataset_create` — this MCP tool is not ready.
+- Do NOT generate SAS URLs. Local JSONL + `inputData` is the only supported path.
+
 ## Prerequisites
 
 - App Insights resource resolved (see [trace skill](../../trace/trace.md) Before Starting)
@@ -218,9 +223,7 @@ Ask the user:
 - *"Would you like to add ground_truth reference answers for any of these?"*
 - *"What should I name this dataset version?"*
 
-## Step 4 — Persist Dataset
-
-### Option A: Local JSONL (Preferred for Version Control)
+## Step 4 — Persist Dataset (Local JSONL)
 
 Save approved candidates to `datasets/<agent-name>-<source>-v<N>.jsonl`:
 
@@ -228,10 +231,6 @@ Save approved candidates to `datasets/<agent-name>-<source>-v<N>.jsonl`:
 {"query": "How do I reset my password?", "context": "User account management", "metadata": {"source": "trace", "conversationId": "conv-abc-123", "harvestRule": "error"}}
 {"query": "What's the status of my order?", "response": "...", "ground_truth": "Order #12345 shipped on...", "metadata": {"source": "trace", "conversationId": "conv-def-456", "harvestRule": "latency"}}
 ```
-
-### ~~Option B: Server-Side Dataset~~ (Not Available)
-
-> ⚠️ **Dataset upload MCP tools are not yet ready.** Skip `evaluation_dataset_create` for now. Always use local JSONL files (Option A) and pass data via `inputData` when running evaluations.
 
 ### Update Manifest
 
