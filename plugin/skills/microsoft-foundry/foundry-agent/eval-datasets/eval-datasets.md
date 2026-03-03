@@ -76,5 +76,6 @@ Each cycle makes the test suite harder and more representative. Production failu
 |-------------|-------|
 | "Run an evaluation" / "Optimize my agent" | [observe skill](../observe/observe.md) |
 | "Search traces" / "Analyze failures" / "Latency analysis" | [trace skill](../trace/trace.md) |
+| "Find eval scores for a response ID" / "Link eval results to traces" | [trace skill → Eval Correlation](../trace/references/eval-correlation.md) |
 | "Deploy my agent" | [deploy skill](../deploy/deploy.md) |
 | "Debug container issues" | [troubleshoot skill](../troubleshoot/troubleshoot.md) |

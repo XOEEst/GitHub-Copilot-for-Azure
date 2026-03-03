@@ -35,6 +35,17 @@ App Insights traces
 [4] Persist Dataset (local JSONL files)
 ```
 
+## Key Concept: Linking Evaluation Results to Traces
+
+> 💡 **Evaluation results live in `customEvents`, not in `dependencies`.** Foundry writes eval scores to App Insights as `customEvents` with `name == "gen_ai.evaluation.result"`. Agent traces (spans) live in `dependencies`. The link between them is **`gen_ai.response.id`** — this field appears on both tables.
+
+| Table | Contains | Join Key |
+|-------|----------|----------|
+| `dependencies` | Agent traces (spans, tool calls, LLM calls) | `customDimensions["gen_ai.response.id"]` |
+| `customEvents` | Evaluation results (scores, labels, explanations) | `customDimensions["gen_ai.response.id"]` |
+
+**To harvest traces with eval scores**, join `customEvents` → `dependencies` on `responseId`. The [Low-Eval Harvest](#low-eval-harvest--traces-with-poor-evaluation-scores) template below shows this pattern. For standalone eval lookups, see the trace skill's [Eval Correlation](../../trace/references/eval-correlation.md).
+
 ## Step 1 — Choose a Harvest Template
 
 Select the appropriate KQL template based on user intent. These templates mirror common LangSmith "run rules" but offer more power through KQL's query language.
