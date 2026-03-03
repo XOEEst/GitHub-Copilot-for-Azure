@@ -171,6 +171,12 @@ Delegate status polling to a sub-agent. Provide the project endpoint, agent name
 
 Read and follow the [invoke skill](../invoke/invoke.md) to send a test message and verify the agent responds correctly. DO NOT SKIP reading the invoke skill — it contains important information about how to format messages for hosted agents for vNext experience.
 
+> ⚠️ **DO NOT stop here.** Continue to Step 10 (Auto-Create Evaluators & Dataset). This step is mandatory after every successful deployment.
+
+### Step 10: Auto-Create Evaluators & Dataset
+
+Follow [After Deployment — Auto-Create Evaluators & Dataset](#after-deployment--auto-create-evaluators--dataset) below.
+
 ## Workflow: Prompt Agent Deployment
 
 ### Step 1: Collect Agent Configuration
@@ -202,6 +208,12 @@ Use `agent_update` with the agent definition:
 ### Step 4: Test the Agent
 
 Read and follow the [invoke skill](../invoke/invoke.md) to send a test message and verify the agent responds correctly.
+
+> ⚠️ **DO NOT stop here.** Continue to Step 5 (Auto-Create Evaluators & Dataset). This step is mandatory after every successful deployment.
+
+### Step 5: Auto-Create Evaluators & Dataset
+
+Follow [After Deployment — Auto-Create Evaluators & Dataset](#after-deployment--auto-create-evaluators--dataset) below.
 
 ## Display Agent Information
 Once deployment is done for either hosted or prompt agent, display the agent's details in a nicely formatted table.
