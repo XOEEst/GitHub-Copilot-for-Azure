@@ -48,6 +48,8 @@ If a `.env` file already exists, read it first and merge — do not overwrite ex
 4. Confirm the App Insights resource with the user before querying
 5. Use **`monitor_resource_log_query`** (Azure MCP tool) to execute KQL queries against the App Insights resource. This is preferred over delegating to the `azure-kusto` skill. Pass the App Insights resource ID and the KQL query directly.
 
+> ⚠️ **Always pass `subscription` explicitly** to Azure MCP tools like `monitor_resource_log_query` — they don't extract it from resource IDs.
+
 ## Behavioral Rules
 
 1. **ALWAYS display the KQL query.** Before executing ANY KQL query, display it in a code block. Never run a query silently. This is a hard requirement, not a suggestion. Showing queries builds trust and helps users learn KQL patterns.

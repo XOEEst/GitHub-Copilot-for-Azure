@@ -15,6 +15,8 @@ Extract production traces from App Insights using KQL, transform them into evalu
 
 > 💡 **Run all KQL queries** using **`monitor_resource_log_query`** (Azure MCP tool) against the App Insights resource. This is preferred over delegating to the `azure-kusto` skill.
 
+> ⚠️ **Always pass `subscription` explicitly** to Azure MCP tools — they don't extract it from resource IDs.
+
 ## Overview
 
 ```
