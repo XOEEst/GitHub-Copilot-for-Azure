@@ -6,6 +6,12 @@ Extract production traces from App Insights using KQL, transform them into evalu
 
 - Do NOT upload datasets to blob storage or call `evaluation_dataset_create` — this MCP tool is not ready.
 - Do NOT generate SAS URLs. Local JSONL + `inputData` is the only supported path.
+- Do NOT use `parse_json(customDimensions)` — `customDimensions` is already a `dynamic` column in App Insights KQL. Access properties directly: `customDimensions["gen_ai.response.id"]`.
+
+## Related References
+
+- [Eval Correlation](../../trace/references/eval-correlation.md) (in `foundry-agent/trace/references/`) — look up eval scores by response/conversation ID via `customEvents`
+- [KQL Templates](../../trace/references/kql-templates.md) (in `foundry-agent/trace/references/`) — general trace query patterns and attribute mappings
 
 ## Prerequisites
 
@@ -44,7 +50,7 @@ App Insights traces
 | `dependencies` | Agent traces (spans, tool calls, LLM calls) | `customDimensions["gen_ai.response.id"]` |
 | `customEvents` | Evaluation results (scores, labels, explanations) | `customDimensions["gen_ai.response.id"]` |
 
-**To harvest traces with eval scores**, join `customEvents` → `dependencies` on `responseId`. The [Low-Eval Harvest](#low-eval-harvest--traces-with-poor-evaluation-scores) template below shows this pattern. For standalone eval lookups, see the trace skill's [Eval Correlation](../../trace/references/eval-correlation.md).
+**To harvest traces with eval scores**, join `customEvents` → `dependencies` on `responseId`. The [Low-Eval Harvest](#low-eval-harvest--traces-with-poor-evaluation-scores) template below shows this pattern. For standalone eval lookups, see [Eval Correlation](../../trace/references/eval-correlation.md) (in `foundry-agent/trace/references/`).
 
 ## Step 1 — Choose a Harvest Template
 
