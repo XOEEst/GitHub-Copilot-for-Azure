@@ -56,6 +56,8 @@ App Insights traces
 
 Select the appropriate KQL template based on user intent. These templates mirror common LangSmith "run rules" but offer more power through KQL's query language.
 
+> ⚠️ **Hosted agents:** The Foundry agent name (e.g., `hosted-agent-022-001`) only appears on `requests`, NOT on `dependencies`. For hosted agents, use the [Hosted Agent Harvest](#hosted-agent-harvest) template which joins via `requests.id` → `dependencies.operation_ParentId`. The templates below work directly for **prompt agents** where `gen_ai.agent.name` on `dependencies` matches the Foundry name.
+
 ### Error Harvest — Failed Traces
 
 Captures all traces where the agent returned errors. Equivalent to LangSmith's `eq(error, True)` run rule.
@@ -66,7 +68,6 @@ dependencies
 | where success == false
 | where isnotempty(customDimensions["gen_ai.operation.name"])
 | where customDimensions["gen_ai.agent.name"] == "<agent-name>"
-    or customDimensions["azure.ai.agentserver.agent_name"] == "<agent-name>"
 | extend
     conversationId = tostring(customDimensions["gen_ai.conversation.id"]),
     responseId = tostring(customDimensions["gen_ai.response.id"]),
@@ -129,7 +130,6 @@ dependencies
 | where duration > <threshold_ms>
 | where isnotempty(customDimensions["gen_ai.operation.name"])
 | where customDimensions["gen_ai.agent.name"] == "<agent-name>"
-    or customDimensions["azure.ai.agentserver.agent_name"] == "<agent-name>"
 | extend
     conversationId = tostring(customDimensions["gen_ai.conversation.id"]),
     responseId = tostring(customDimensions["gen_ai.response.id"]),
@@ -156,7 +156,6 @@ Combines multiple filters in a single query. Equivalent to LangSmith's compound 
 dependencies
 | where timestamp > ago(7d)
 | where customDimensions["gen_ai.agent.name"] == "<agent-name>"
-    or customDimensions["azure.ai.agentserver.agent_name"] == "<agent-name>"
 | where isnotempty(customDimensions["gen_ai.operation.name"])
 | where success == false or duration > <threshold_ms>
 | extend
@@ -192,34 +191,73 @@ Add `| sample <N>` or `| take <N>` to any harvest query to control the number of
 // Run each harvest separately and combine
 ```
 
+### Hosted Agent Harvest — Two-Step Join Pattern
+
+For hosted agents, the Foundry agent name lives on `requests`, not `dependencies`. Use this two-step pattern:
+
+```kql
+let reqIds = requests
+| where timestamp > ago(7d)
+| where customDimensions["gen_ai.agent.name"] == "<foundry-agent-name>"
+| distinct id;
+dependencies
+| where timestamp > ago(7d)
+| where operation_ParentId in (reqIds)
+| where customDimensions["gen_ai.operation.name"] == "invoke_agent"
+| extend
+    conversationId = tostring(customDimensions["gen_ai.conversation.id"]),
+    responseId = tostring(customDimensions["gen_ai.response.id"]),
+    operation = tostring(customDimensions["gen_ai.operation.name"]),
+    model = tostring(customDimensions["gen_ai.request.model"]),
+    inputTokens = toint(customDimensions["gen_ai.usage.input_tokens"]),
+    outputTokens = toint(customDimensions["gen_ai.usage.output_tokens"])
+| project timestamp, duration, success, conversationId, responseId, operation, model, inputTokens, outputTokens
+| order by timestamp desc
+| take 100
+```
+
+> 💡 **When to use this pattern:** If the direct `dependencies` filter by `gen_ai.agent.name` returns no results, the agent is likely a hosted agent where `gen_ai.agent.name` on `dependencies` holds the code-level class name (e.g., `BingSearchAgent`), not the Foundry name. Switch to this `requests` → `dependencies` join.
+
 ## Step 2 — Schema Transform
 
 Transform harvested traces into JSONL dataset format. Each line in the JSONL file must contain:
 
 | Field | Required | Source |
 |-------|----------|--------|
-| `query` | ✅ | User input from the trace (reconstruct from `gen_ai.content.prompt` events) |
-| `response` | Optional | Agent output from the trace |
+| `query` | ✅ | User input — extract from `gen_ai.input.messages` on `invoke_agent` dependency spans |
+| `response` | Optional | Agent output — extract from `gen_ai.output.messages` on `invoke_agent` dependency spans |
 | `context` | Optional | Tool results or retrieved documents from the trace |
 | `ground_truth` | Optional | Expected correct answer (add during curation) |
 | `metadata` | Optional | Source info: `{"source": "trace", "conversationId": "...", "harvestRule": "error"}` |
 
 ### Extracting Input/Output from Traces
 
-After harvesting conversation-level summaries, drill into each conversation to extract actual input/output:
+The full input/output content lives on `invoke_agent` dependency spans in `gen_ai.input.messages` and `gen_ai.output.messages`. These contain complete message arrays:
+
+```json
+// gen_ai.input.messages structure:
+[{"role": "user", "parts": [{"type": "text", "content": "How do I reset my password?"}]}]
+
+// gen_ai.output.messages structure:
+[{"role": "assistant", "parts": [{"type": "text", "content": "To reset your password..."}]}]
+```
+
+Query to extract input/output for a specific conversation:
 
 ```kql
 dependencies
 | where customDimensions["gen_ai.conversation.id"] == "<conversation-id>"
-| where customDimensions["gen_ai.operation.name"] in ("execute_agent", "chat", "create_response")
+| where customDimensions["gen_ai.operation.name"] in ("invoke_agent", "execute_agent", "chat", "create_response")
 | extend
     responseId = tostring(customDimensions["gen_ai.response.id"]),
-    operation = tostring(customDimensions["gen_ai.operation.name"])
+    operation = tostring(customDimensions["gen_ai.operation.name"]),
+    inputMessages = tostring(customDimensions["gen_ai.input.messages"]),
+    outputMessages = tostring(customDimensions["gen_ai.output.messages"])
 | order by timestamp asc
 | take 10
 ```
 
-Then extract the prompt and completion events for each span. Save extracted data to a local JSONL file:
+Extract the `query` from the last user-role entry in `gen_ai.input.messages` and the `response` from `gen_ai.output.messages`. Save extracted data to a local JSONL file:
 
 ```
 datasets/<agent-name>-traces-candidates-<date>.jsonl
