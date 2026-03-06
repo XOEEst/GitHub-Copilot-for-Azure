@@ -31,6 +31,10 @@ describe("observe - Trigger Tests", () => {
       "Improve my Foundry agent quality",
       "Optimize my agent prompt in Foundry",
       "Compare agent versions in Foundry",
+      "Optimize my prompt for my Foundry agent",
+      "Improve my agent instructions in Foundry",
+      "Optimize agent instructions for my Foundry project",
+      "Optimize the system prompt for my Foundry agent",
     ];
 
     test.each(shouldTriggerPrompts)(

@@ -59,6 +59,15 @@ describe(`${SKILL_NAME} - Unit Tests`, () => {
       expect(skill.content).toContain("troubleshoot");
     });
 
+    test("contains prompt optimization lifecycle entries", () => {
+      expect(skill.content).toContain("Optimize / improve agent prompt or instructions");
+      expect(skill.content).toContain("Evaluate agent quality and optimize (full loop)");
+    });
+
+    test("mentions prompt_optimize MCP tool", () => {
+      expect(skill.content).toContain("prompt_optimize");
+    });
+
     test("contains common project context resolution", () => {
       expect(skill.content).toContain("azure.yaml");
       expect(skill.content).toContain("azd env get-values");
@@ -79,6 +88,16 @@ describe(`${SKILL_NAME} - Unit Tests`, () => {
       expect(skill.content).toContain("foundry-agent/deploy/deploy.md");
       expect(skill.content).toContain("foundry-agent/invoke/invoke.md");
       expect(skill.content).toContain("foundry-agent/troubleshoot/troubleshoot.md");
+    });
+
+    test("references observe sub-skill in sub-skills table", () => {
+      expect(skill.content).toContain("foundry-agent/observe/observe.md");
+    });
+
+    test("references observe sub-skill in lifecycle table for prompt optimization", () => {
+      // Verify the lifecycle table rows link to observe for prompt optimization intents
+      expect(skill.content).toContain("Optimize / improve agent prompt or instructions");
+      expect(skill.content).toMatch(/Optimize \/ improve agent prompt or instructions.*observe.*observe\.md/s);
     });
 
     test("references quota sub-skill", () => {
