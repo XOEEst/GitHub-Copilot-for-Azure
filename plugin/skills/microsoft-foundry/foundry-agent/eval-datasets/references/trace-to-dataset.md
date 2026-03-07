@@ -4,8 +4,6 @@ Extract production traces from App Insights using KQL, transform them into evalu
 
 ## ⛔ Do NOT
 
-- Do NOT upload datasets to blob storage or call `evaluation_dataset_create` — this MCP tool is not ready.
-- Do NOT generate SAS URLs. Local JSONL + `inputData` is the only supported path.
 - Do NOT use `parse_json(customDimensions)` — `customDimensions` is already a `dynamic` column in App Insights KQL. Access properties directly: `customDimensions["gen_ai.response.id"]`.
 
 ## Related References
@@ -39,6 +37,9 @@ App Insights traces
     │
     ▼
 [4] Persist Dataset (local JSONL files)
+    │
+    ▼
+[5] Sync to Foundry (optional — upload to project-connected storage)
 ```
 
 ## Key Concept: Linking Evaluation Results to Traces
@@ -314,6 +315,76 @@ After persisting, update `datasets/manifest.json` with lineage information:
 ## Next Steps
 
 After creating a dataset:
+- **Sync to Foundry** → Step 5 below (recommended for shared/CI use)
 - **Run evaluation** → [observe skill Step 2](../../observe/references/evaluate-step.md)
 - **Version and tag** → [Dataset Versioning](dataset-versioning.md)
 - **Organize into splits** → [Dataset Organization](dataset-organization.md)
+
+## Step 5 — Sync to Foundry (Optional)
+
+Upload the local dataset to Foundry so it's available for server-side evaluations, shared access, and CI/CD pipelines.
+
+### 5a. Discover Storage Connection
+
+Use `project_connection_list` to find an existing `AzureBlob` storage connection on the Foundry project:
+
+```
+project_connection_list(foundryProjectResourceId, category: "AzureBlob")
+```
+
+- **Found** → use its `connectionName` and `target` (storage account URL)
+- **Not found** → proceed to 5b
+
+### 5b. Create Storage Connection (if needed)
+
+Ask the user for a storage account, then create a project connection:
+
+```
+project_connection_create(
+  foundryProjectResourceId,
+  connectionName: "datasets-storage",
+  category: "AzureBlob",
+  target: "https://<storage-account>.blob.core.windows.net",
+  authType: "AAD"
+)
+```
+
+> 💡 **Tip:** The storage account must be in the same subscription or the user must have access. AAD auth is preferred — it uses the caller's identity.
+
+### 5c. Upload JSONL to Blob Storage
+
+Upload the local dataset file to a `datasets` container in the storage account:
+
+```bash
+az storage blob upload \
+  --account-name <storage-account> \
+  --container-name datasets \
+  --name <agent-name>-<source>-v<N>.jsonl \
+  --file datasets/<agent-name>-<source>-v<N>.jsonl \
+  --auth-mode login
+```
+
+> ⚠️ **Always pass `--auth-mode login`** to use AAD credentials. If the container doesn't exist, create it first with `az storage container create`.
+
+### 5d. Register Dataset in Foundry
+
+Use `evaluation_dataset_create` with the blob URI and connection name:
+
+```
+evaluation_dataset_create(
+  projectEndpoint: "<project-endpoint>",
+  datasetContentUri: "https://<storage-account>.blob.core.windows.net/datasets/<file>.jsonl",
+  datasetName: "<agent-name>-<source>",
+  datasetVersion: "<N>"
+)
+```
+
+### 5e. Verify
+
+Confirm the dataset is registered:
+
+```
+evaluation_dataset_get(projectEndpoint, datasetName: "<agent-name>-<source>", datasetVersion: "<N>")
+```
+
+Display the registered dataset details to the user. Update `datasets/manifest.json` with `"synced": true` and the server-side dataset name/version.
