@@ -6,6 +6,7 @@ exports[`microsoft-foundry:resource/create - Trigger Tests Trigger Keywords Snap
   "extractedKeywords": [
     "agent",
     "agents",
+    "ai",
     "assignment",
     "availability",
     "azure",
@@ -76,6 +77,7 @@ exports[`microsoft-foundry:resource/create - Trigger Tests Trigger Keywords Snap
 [
   "agent",
   "agents",
+  "ai",
   "assignment",
   "availability",
   "azure",

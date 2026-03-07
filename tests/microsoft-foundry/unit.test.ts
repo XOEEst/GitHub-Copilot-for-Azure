@@ -47,7 +47,7 @@ describe(`${SKILL_NAME} - Unit Tests`, () => {
     });
 
     test("contains expected sections", () => {
-      expect(skill.content).toContain("## Agent Lifecycle");
+      expect(skill.content).toContain("## Agent Development Lifecycle");
       expect(skill.content).toContain("## Sub-Skills");
       expect(skill.content).toContain("## Project Context Resolution");
       expect(skill.content).toContain("## Agent Types");
