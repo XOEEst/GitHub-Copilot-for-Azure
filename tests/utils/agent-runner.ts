@@ -17,12 +17,11 @@ import * as os from "os";
 import * as path from "path";
 import { fileURLToPath } from "url";
 import { type CopilotSession, CopilotClient, type SessionEvent, approveAll } from "@github/copilot-sdk";
-import { getAllAssistantMessages } from "./evaluate";
 import { redactSecrets } from "./redact";
+import { listSkills } from "./skill-loader";
 
 // Re-export for backward compatibility (consumers still import from agent-runner)
 export { getAllAssistantMessages } from "./evaluate";
-export { isSkillInvoked, getToolCalls } from "./evaluate";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -39,7 +38,7 @@ function getBundledCliPath(): string {
   return path.resolve(__dirname, "../node_modules/@github/copilot/index.js");
 }
 
-export interface TokenUsage {
+interface TokenUsage {
   /** Total input tokens across all LLM calls */
   inputTokens: number;
   /** Total output tokens across all LLM calls */
@@ -108,9 +107,15 @@ export interface AgentRunConfig {
     content: string
   };
   preserveWorkspace?: boolean;
+
+  /**
+   * Skills to include for the agent run.
+   * If undefined, all the skills in azure plugin will be included.
+   */
+  includeSkills?: string[];
 }
 
-export interface KeywordOptions {
+interface KeywordOptions {
   caseSensitive?: boolean;
 }
 
@@ -197,7 +202,7 @@ function generateMarkdownReport(config: AgentRunConfig, agentMetadata: AgentMeta
       }
 
       case "assistant.message_delta": {
-      // Accumulate deltas for streaming - we'll use the final message instead
+        // Accumulate deltas for streaming - we'll use the final message instead
         const messageId = event.data.messageId as string;
         const deltaContent = event.data.deltaContent as string;
         if (messageId && deltaContent) {
@@ -217,7 +222,7 @@ function generateMarkdownReport(config: AgentRunConfig, agentMetadata: AgentMeta
       }
 
       case "assistant.reasoning_delta": {
-      // Accumulate reasoning deltas
+        // Accumulate reasoning deltas
         const reasoningId = event.data.reasoningId as string;
         const deltaContent = event.data.deltaContent as string;
         if (reasoningId && deltaContent) {
@@ -241,7 +246,7 @@ function generateMarkdownReport(config: AgentRunConfig, agentMetadata: AgentMeta
           lines.push(`skill: ${skillName}`);
           lines.push("```");
         } else {
-        // Regular tool call
+          // Regular tool call
           let argsJson: string;
           try {
             argsJson = JSON.stringify(args, null, 2);
@@ -493,15 +498,30 @@ export function useAgentRunner() {
         cwd: testWorkspace,
         cliArgs: cliArgs,
         cliPath: getBundledCliPath(),
+        env: {
+          ...process.env,
+          SKILLS_INSTRUCTIONS: "true"
+        }
       }) as CopilotClient;
       entry.client = client;
 
       const skillDirectory = path.resolve(__dirname, "../../plugin/skills");
 
+      let disabledSkills: string[] | undefined;
+      if (config.includeSkills) {
+        const skills = listSkills();
+        if (config.includeSkills.some((skillName) => !skills.includes(skillName))) {
+          const invalidSkills = config.includeSkills.filter((skillName) => !skills.includes(skillName));
+          throw new Error(`Invalid includeSkills. ${invalidSkills} are not valid skills.`);
+        }
+        disabledSkills = skills.filter((skillName) => !config.includeSkills?.includes(skillName));
+      }
+
       const session = await client.createSession({
         model: modelOverride || "claude-sonnet-4.5",
         onPermissionRequest: approveAll,
         skillDirectories: [skillDirectory],
+        disabledSkills: disabledSkills,
         mcpServers: {
           azure: {
             type: "stdio",
@@ -510,10 +530,7 @@ export function useAgentRunner() {
             tools: ["*"]
           }
         },
-        systemMessage: config.systemPrompt ?? {
-          mode: "append",
-          content: "When a relevant skill is available, prefer using it instead of doing the task manually."
-        }
+        systemMessage: config.systemPrompt
       });
       entry.session = session;
 
@@ -720,28 +737,6 @@ export function getIntegrationSkipReason(): string | undefined {
   return integrationSkipReason;
 }
 
-/**
- * Common Azure deployment link patterns
- * Patterns ensure the domain ends properly to prevent matching evil.com/azurewebsites.net or similar
- */
-const DEPLOY_LINK_PATTERNS = [
-  // Azure App Service URLs (matches domain followed by path, query, fragment, whitespace, or punctuation)
-  /https?:\/\/[\w.-]+\.azurewebsites\.net(?=[/\s?#)\].,;:]|$)/i,
-  // Azure Static Web Apps URLs
-  /https:\/\/[\w.-]+\.azurestaticapps\.net(?=[/\s?#)\].,;:]|$)/i,
-  // Azure Container Apps URLs
-  /https:\/\/[\w.-]+\.azurecontainerapps\.io(?=[/\s?#)\].,;:]|$)/i
-];
-
-/**
- * Check if the agent response contains any Azure deployment links
- */
-export function hasDeployLinks(agentMetadata: AgentMetadata): boolean {
-  const content = getAllAssistantMessages(agentMetadata);
-
-  return DEPLOY_LINK_PATTERNS.some(pattern => pattern.test(content));
-}
-
 const DEFAULT_REPORT_DIR = path.join(__dirname, "..", "reports");
 const TIME_STAMP = (process.env.START_TIMESTAMP || new Date().toISOString()).replace(/[:.]/g, "-");
 
@@ -788,218 +783,4 @@ function sanitizeFileName(name: string): string {
     .replace(/-+/g, "-")            // Collapse multiple dashes
     .replace(/_+/g, "_")            // Collapse multiple underscores
     .substring(0, 200);             // Limit length
-}
-
-// ─── Multi-turn conversation support ─────────────────────────────────────────
-
-export interface ConversationPrompt {
-  prompt: string;
-  label?: string;
-}
-
-export interface ConversationConfig {
-  setup?: (workspace: string) => Promise<void>;
-  prompts: ConversationPrompt[];
-  nonInteractive?: boolean;
-  preserveWorkspace?: boolean;
-  systemPrompt?: {
-    mode: "append" | "replace";
-    content: string;
-  };
-  /** Maximum total LLM turns across all prompts. Session aborts if exceeded. */
-  maxTurns?: number;
-  /** Maximum `azd up` invocations across all prompts. Session aborts if exceeded. */
-  maxDeployAttempts?: number;
-  /** Per-turn timeout in ms. Defaults to 30 minutes. */
-  turnTimeout?: number;
-}
-
-export interface ConversationResult {
-  /** Per-prompt metadata (events collected between session.idle boundaries) */
-  turns: AgentMetadata[];
-  /** All events merged across all turns */
-  aggregate: AgentMetadata;
-  /** Workspace path — preserved when config.preserveWorkspace is true */
-  workspace: string;
-}
-
-/**
- * Count LLM turns (assistant messages) across events
- */
-function countLlmTurns(events: SessionEvent[]): number {
-  return events.filter(
-    e => e.type === "assistant.message" || e.type === "assistant.message_delta"
-  ).reduce((ids, e) => {
-    const id = e.data.messageId as string | undefined;
-    if (id) ids.add(id);
-    return ids;
-  }, new Set<string>()).size;
-}
-
-/**
- * Run a multi-turn conversation within a single agent session.
- *
- * Sends each prompt sequentially, waits for session.idle between turns,
- * and collects per-turn + aggregate AgentMetadata. Supports limits on
- * total LLM turns and azd deploy attempts.
- */
-export async function runConversation(config: ConversationConfig): Promise<ConversationResult> {
-  if (config.prompts.length === 0) {
-    throw new Error("runConversation requires at least one prompt");
-  }
-
-  const testWorkspace = fs.mkdtempSync(path.join(os.tmpdir(), "skill-test-"));
-
-  let client: CopilotClient | undefined;
-  let session: CopilotSession | undefined;
-
-  const turns: AgentMetadata[] = [];
-  const aggregate: AgentMetadata = { events: [], testComments: [] };
-
-  try {
-    if (config.setup) {
-      await config.setup(testWorkspace);
-    }
-
-    const cliArgs: string[] = config.nonInteractive ? ["--yolo"] : [];
-    if (process.env.DEBUG) {
-      cliArgs.push("--log-dir");
-      cliArgs.push(buildLogFilePath());
-    }
-
-    client = new CopilotClient({
-      logLevel: process.env.DEBUG ? "all" : "error",
-      cwd: testWorkspace,
-      cliArgs: cliArgs,
-      cliPath: getBundledCliPath(),
-    }) as CopilotClient;
-
-    const skillDirectory = path.resolve(__dirname, "../../plugin/skills");
-
-    session = await client.createSession({
-      model: modelOverride || "claude-sonnet-4.5",
-      onPermissionRequest: approveAll,
-      skillDirectories: [skillDirectory],
-      mcpServers: {
-        azure: {
-          type: "stdio",
-          command: "npx",
-          args: ["-y", "@azure/mcp", "server", "start"],
-          tools: ["*"]
-        }
-      },
-      systemMessage: config.systemPrompt ?? {
-        mode: "append",
-        content: "When a relevant skill is available, prefer using it instead of doing the task manually."
-      }
-    });
-
-    let aborted = false;
-    let currentTurnMetadata: AgentMetadata = { events: [], testComments: [] };
-    let currentLabel = "Turn 1";
-    let resolveIdle: (() => void) | undefined;
-
-    session.on(async (event: SessionEvent) => {
-      if (process.env.DEBUG) {
-        console.log(`=== [${currentLabel}] session event ${event.type}`);
-      }
-
-      if (event.type === "session.idle") {
-        resolveIdle?.();
-        return;
-      }
-
-      currentTurnMetadata.events.push(event);
-      aggregate.events.push(event);
-
-      // Check turn limits
-      if (config.maxTurns && countLlmTurns(aggregate.events) > config.maxTurns) {
-        console.warn(`⚠️  Max LLM turns (${config.maxTurns}) exceeded — aborting`);
-        aborted = true;
-        resolveIdle?.();
-        void session!.abort();
-        return;
-      }
-
-      // Check deploy attempt limits (azd up / azd deploy / azd provision)
-      if (config.maxDeployAttempts) {
-        const azdCalls = aggregate.events.filter(
-          e => e.type === "tool.execution_start" &&
-            JSON.stringify(e.data.arguments ?? {}).match(/azd\s+(up|deploy|provision)/i)
-        ).length;
-        if (azdCalls > config.maxDeployAttempts) {
-          console.warn(`⚠️  Max deploy attempts (${config.maxDeployAttempts}) exceeded — aborting`);
-          aborted = true;
-          resolveIdle?.();
-          void session!.abort();
-          return;
-        }
-      }
-    });
-
-    const TURN_TIMEOUT = config.turnTimeout ?? 1800000; // 30 minutes default
-
-    for (let i = 0; i < config.prompts.length; i++) {
-      if (aborted) break;
-
-      const promptEntry = config.prompts[i];
-      currentLabel = promptEntry.label ?? `Turn ${i + 1}`;
-      currentTurnMetadata = { events: [], testComments: [] };
-
-      if (process.env.DEBUG) {
-        console.log(`\n=== ${currentLabel}: "${promptEntry.prompt.substring(0, 80)}..."`);
-      }
-
-      const done = new Promise<void>((resolve) => {
-        resolveIdle = resolve;
-      });
-
-      let timeoutHandle: ReturnType<typeof setTimeout>;
-      const timeout = new Promise<"timeout">((resolve) => {
-        timeoutHandle = setTimeout(() => resolve("timeout"), TURN_TIMEOUT);
-      });
-
-      await session.send({ prompt: promptEntry.prompt });
-
-      const result = await Promise.race([done.then(() => "done" as const), timeout]);
-      clearTimeout(timeoutHandle!);
-      if (result === "timeout") {
-        console.warn(`⚠️  ${currentLabel} timed out after ${TURN_TIMEOUT / 1000}s — aborting`);
-        aborted = true;
-        void session!.abort();
-      }
-
-      turns.push(currentTurnMetadata);
-
-      if (process.env.DEBUG) {
-        console.log(`=== [${currentLabel}] completed with ${currentTurnMetadata.events.length} events`);
-      }
-    }
-
-    return { turns, aggregate, workspace: testWorkspace };
-  } catch (error) {
-    console.error("Conversation runner error:", error);
-    throw error;
-  } finally {
-    // Write report even on timeout/failure so test results are captured
-    try {
-      if (aggregate.events.length > 0 && isTest()) {
-        const reportConfig: AgentRunConfig = {
-          prompt: config.prompts.map(p => p.prompt).join("\n---\n"),
-        };
-        writeMarkdownReport(reportConfig, aggregate);
-      }
-    } catch { /* ignore */ }
-    try {
-      if (session) await session.destroy();
-    } catch { /* ignore */ }
-    try {
-      if (client) await client.stop();
-    } catch { /* ignore */ }
-    try {
-      if (!config.preserveWorkspace) {
-        fs.rmSync(testWorkspace, { recursive: true, force: true });
-      }
-    } catch { /* ignore */ }
-  }
 }
