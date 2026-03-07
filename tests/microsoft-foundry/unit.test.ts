@@ -47,16 +47,25 @@ describe(`${SKILL_NAME} - Unit Tests`, () => {
     });
 
     test("contains expected sections", () => {
-      expect(skill.content).toContain("## Agent Lifecycle");
+      expect(skill.content).toContain("## Agent Development Lifecycle");
       expect(skill.content).toContain("## Sub-Skills");
-      expect(skill.content).toContain("## Project Context Resolution");
-      expect(skill.content).toContain("## Agent Types");
+      expect(skill.content).toContain("## Agent: Project Context Resolution");
+      expect(skill.content).toContain("## Agent: Agent Types");
     });
 
     test("contains agent routing references", () => {
       expect(skill.content).toContain("deploy");
       expect(skill.content).toContain("invoke");
       expect(skill.content).toContain("troubleshoot");
+    });
+
+    test("contains prompt optimization lifecycle entries", () => {
+      expect(skill.content).toContain("Optimize / improve agent prompt or instructions");
+      expect(skill.content).toContain("Evaluate agent quality and optimize (full loop)");
+    });
+
+    test("mentions prompt_optimize MCP tool", () => {
+      expect(skill.content).toContain("prompt_optimize");
     });
 
     test("contains common project context resolution", () => {
@@ -79,6 +88,16 @@ describe(`${SKILL_NAME} - Unit Tests`, () => {
       expect(skill.content).toContain("foundry-agent/deploy/deploy.md");
       expect(skill.content).toContain("foundry-agent/invoke/invoke.md");
       expect(skill.content).toContain("foundry-agent/troubleshoot/troubleshoot.md");
+    });
+
+    test("references observe sub-skill in sub-skills table", () => {
+      expect(skill.content).toContain("foundry-agent/observe/observe.md");
+    });
+
+    test("references observe sub-skill in lifecycle table for prompt optimization", () => {
+      // Verify the lifecycle table rows link to observe for prompt optimization intents
+      expect(skill.content).toContain("Optimize / improve agent prompt or instructions");
+      expect(skill.content).toMatch(/Optimize \/ improve agent prompt or instructions.*observe.*observe\.md/s);
     });
 
     test("references quota sub-skill", () => {
