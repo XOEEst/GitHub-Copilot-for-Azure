@@ -1,16 +1,25 @@
 # Dataset Comparison — Experiment Framework & A/B Testing
 
-Run structured experiments that compare agent versions against the same dataset, and present results as leaderboards with per-evaluator breakdowns.
+Run structured experiments that compare agent versions or dataset versions, and present results as leaderboards with per-evaluator breakdowns.
+
+## Experiment Types
+
+| Type | What Varies | What's Pinned | Use Case |
+|------|------------|---------------|----------|
+| **Agent comparison** | Agent versions | Same dataset | "Which agent version is better?" |
+| **Dataset comparison** | Dataset versions | Same agent | "Did scores drop because of harder tests or agent regression?" |
 
 ## Experiment Structure
 
 An experiment consists of:
-1. **One pinned dataset version** — ensures fair comparison
-2. **Multiple agent versions** — the variables being compared
-3. **Same evaluators** — applied consistently across all versions
+1. **Pinned variable** — either dataset version (agent comparison) or agent version (dataset comparison)
+2. **Varied variable** — the versions being compared
+3. **Same evaluators** — applied consistently across all runs
 4. **Comparison results** — which version wins on each metric
 
 ## Step 1 — Define the Experiment
+
+**Agent comparison** (same dataset, different agent versions):
 
 | Parameter | Value | Example |
 |-----------|-------|---------|
@@ -19,15 +28,32 @@ An experiment consists of:
 | Treatment(s) | Agent version(s) to evaluate | `v3`, `v4` |
 | Evaluators | Same set for all runs | coherence, fluency, relevance, intent_resolution, task_adherence |
 
+**Dataset comparison** (same agent, different dataset versions):
+
+| Parameter | Value | Example |
+|-----------|-------|---------|
+| Agent | Pinned agent version | `v3` |
+| Baseline dataset | Previous dataset version | `support-bot-traces-v2` |
+| Treatment dataset(s) | New dataset version(s) | `support-bot-traces-v3` |
+| Evaluators | Same set for all runs | coherence, fluency, relevance, intent_resolution, task_adherence |
+
 ## Step 2 — Run Evaluations
 
-For each agent version, run **`evaluation_agent_batch_eval_create`** with:
+**Agent comparison:** For each agent version, run **`evaluation_agent_batch_eval_create`** with:
 - Same `evaluationId` (groups all runs for comparison)
 - Same `inputData` (from the pinned dataset)
 - Same `evaluatorNames`
 - Different `agentVersion`
 
-> **Important:** Use `evaluationId` (NOT `evalId`) to group runs. All versions must be in the same evaluation group for comparison to work.
+**Dataset comparison:** For each dataset version, run **`evaluation_agent_batch_eval_create`** with:
+- Same `evaluationId` (groups all runs for comparison)
+- Same `agentVersion`
+- Same `evaluatorNames`
+- Different `inputData` (from each dataset version)
+
+> **Important:** Use `evaluationId` (NOT `evalId`) to group runs. All runs must be in the same evaluation group for comparison to work.
+
+> ⚠️ **Dataset comparison: score drops are expected.** When comparing v1→v2 datasets, lower scores on the new dataset likely mean the new test cases are harder (better coverage), not that the agent regressed. **Do NOT remove dataset rows or weaken evaluators to recover scores.** Instead, optimize the agent for the new failure patterns, then re-evaluate.
 
 ## Step 3 — Compare Results
 

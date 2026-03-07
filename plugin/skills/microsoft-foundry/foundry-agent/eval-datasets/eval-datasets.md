@@ -15,9 +15,9 @@ USE FOR: create dataset from traces, harvest traces into dataset, build test dat
 | Property | Value |
 |----------|-------|
 | MCP server | `foundry-mcp` |
-| Key MCP tools | `evaluation_dataset_get`, `evaluation_get`, `evaluation_comparison_create`, `evaluation_comparison_get` |
-| Azure services | Application Insights (via `monitor_resource_log_query`) |
-| ⚠️ Not available | `evaluation_dataset_create` (dataset upload MCP not ready — use local JSONL + `inputData`) |
+| Key MCP tools | `evaluation_dataset_create`, `evaluation_dataset_get`, `evaluation_dataset_versions_get`, `evaluation_get`, `evaluation_comparison_create`, `evaluation_comparison_get` |
+| Storage tools | `project_connection_list` (discover AzureBlob connection), `project_connection_create` (add storage connection) |
+| Azure services | Application Insights (via `monitor_resource_log_query`), Azure Blob Storage (dataset sync) |
 | Prerequisites | Agent deployed, App Insights connected (see [trace skill](../trace/trace.md)) |
 | Artifact paths | `datasets/`, `results/`, `evaluators/` |
 
@@ -32,6 +32,7 @@ USE FOR: create dataset from traces, harvest traces into dataset, build test dat
 | "Show eval metrics over time" / "Evaluation trending" | [Eval Trending](references/eval-trending.md) |
 | "Did my agent regress?" / "Regression detection" | [Eval Regression](references/eval-regression.md) |
 | "Compare datasets" / "Experiment comparison" / "A/B test" | [Dataset Comparison](references/dataset-comparison.md) |
+| "Sync dataset to Foundry" / "Upload dataset" | [Trace-to-Dataset Pipeline → Step 5](references/trace-to-dataset.md#step-5--sync-to-foundry-optional) |
 | "Trace my evaluation lineage" / "Audit eval history" | [Eval Lineage](references/eval-lineage.md) |
 
 ## Before Starting — Detect Current State
@@ -50,11 +51,12 @@ This skill enables a closed-loop improvement cycle where production failures bec
 Production Agent → [1] Trace (App Insights + OTel)
                 → [2] Harvest (KQL extraction)
                 → [3] Curate (human review)
-                → [4] Dataset (versioned, tagged)
-                → [5] Evaluate (batch eval)
-                → [6] Analyze (trending + regression)
-                → [7] Compare (version diff)
-                → [8] Deploy → back to [1]
+                → [4] Dataset (local JSONL, versioned)
+                → [5] Sync to Foundry (optional)
+                → [6] Evaluate (batch eval)
+                → [7] Analyze (trending + regression)
+                → [8] Compare (agent versions OR dataset versions)
+                → [9] Deploy → back to [1]
 ```
 
 Each cycle makes the test suite harder and more representative. Production failures from release N become regression tests for release N+1.
@@ -67,7 +69,7 @@ Each cycle makes the test suite harder and more representative. Production failu
 4. **Use versioning conventions.** Follow the naming pattern `<agent-name>-<source>-v<N>` (e.g., `support-bot-traces-v3`).
 5. **Persist artifacts.** Save datasets to `datasets/`, evaluation results to `results/`, and track lineage in `datasets/manifest.json`.
 6. **Confirm before overwriting.** If a dataset version already exists, warn the user and ask for confirmation before replacing.
-7. **Never upload datasets to cloud storage.** Do not use blob upload, SAS URLs, or `evaluation_dataset_create`. Always persist datasets locally and reference them via `inputData` when running evaluations.
+7. **Sync to Foundry when requested.** After saving datasets locally, optionally sync to Foundry using `evaluation_dataset_create` with a project storage connection. See [Trace-to-Dataset → Step 5](references/trace-to-dataset.md#step-5--sync-to-foundry-optional) for the full flow.
 8. **Never remove dataset rows or weaken evaluators to recover scores.** Score drops after a dataset update are expected — harder tests expose real gaps. Optimize the agent for new failure patterns; do not shrink the test suite.
 
 ## Related Skills

@@ -43,9 +43,21 @@ datasets/support-bot-traces-v3.jsonl  ← pinned by filename
 
 Pass the contents via `inputData` parameter in **`evaluation_agent_batch_eval_create`**.
 
-### ~~Server-Side Pinning~~ (Not Available)
+### Server-Side Version Discovery
 
-> ⚠️ **Dataset upload MCP tools are not yet ready.** Skip `evaluation_dataset_create` (uploads) for now. You may use `evaluation_dataset_get` for read-only inspection of any existing server-side datasets, but do **not** rely on them for version pinning—use local JSONL files and pass data via `inputData` when running evaluations.
+Use `evaluation_dataset_versions_get` to list all versions of a dataset registered in Foundry:
+
+```
+evaluation_dataset_versions_get(projectEndpoint, datasetName: "<agent-name>-<source>")
+```
+
+Use `evaluation_dataset_get` without a name to list all datasets in the project:
+
+```
+evaluation_dataset_get(projectEndpoint)
+```
+
+> 💡 **Tip:** Server-side versions are available after syncing via [Trace-to-Dataset → Step 5](trace-to-dataset.md#step-5--sync-to-foundry-optional). Local `manifest.json` remains useful for lineage metadata (source, harvestRule, reviewedBy) not stored server-side.
 
 ## Manifest File
 
