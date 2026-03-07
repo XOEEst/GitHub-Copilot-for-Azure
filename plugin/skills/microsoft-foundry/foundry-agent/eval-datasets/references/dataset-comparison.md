@@ -1,34 +1,16 @@
-# Dataset Comparison — Experiment Framework & A/B Testing
+# Dataset Comparison — A/B Testing Across Dataset Versions
 
-Run structured experiments that compare agent versions or dataset versions, and present results as leaderboards with per-evaluator breakdowns.
-
-## Experiment Types
-
-| Type | What Varies | What's Pinned | Use Case |
-|------|------------|---------------|----------|
-| **Agent comparison** | Agent versions | Same dataset | "Which agent version is better?" |
-| **Dataset comparison** | Dataset versions | Same agent | "Did scores drop because of harder tests or agent regression?" |
+Run structured experiments that compare how an agent performs across different dataset versions, and present results as leaderboards with per-evaluator breakdowns. Use this to answer: "Did scores drop because of harder tests or agent regression?"
 
 ## Experiment Structure
 
 An experiment consists of:
-1. **Pinned variable** — either dataset version (agent comparison) or agent version (dataset comparison)
-2. **Varied variable** — the versions being compared
+1. **Pinned agent version** — the same agent evaluated on each dataset
+2. **Varied dataset versions** — the versions being compared
 3. **Same evaluators** — applied consistently across all runs
-4. **Comparison results** — which version wins on each metric
+4. **Comparison results** — which dataset version the agent performs better on
 
 ## Step 1 — Define the Experiment
-
-**Agent comparison** (same dataset, different agent versions):
-
-| Parameter | Value | Example |
-|-----------|-------|---------|
-| Dataset | Pinned version from `datasets/manifest.json` | `support-bot-traces-v3` (tag: `prod`) |
-| Baseline | Agent version to compare against | `v2` |
-| Treatment(s) | Agent version(s) to evaluate | `v3`, `v4` |
-| Evaluators | Same set for all runs | coherence, fluency, relevance, intent_resolution, task_adherence |
-
-**Dataset comparison** (same agent, different dataset versions):
 
 | Parameter | Value | Example |
 |-----------|-------|---------|
@@ -39,13 +21,7 @@ An experiment consists of:
 
 ## Step 2 — Run Evaluations
 
-**Agent comparison:** For each agent version, run **`evaluation_agent_batch_eval_create`** with:
-- Same `evaluationId` (groups all runs for comparison)
-- Same `inputData` (from the pinned dataset)
-- Same `evaluatorNames`
-- Different `agentVersion`
-
-**Dataset comparison:** For each dataset version, run **`evaluation_agent_batch_eval_create`** with:
+For each dataset version, run **`evaluation_agent_batch_eval_create`** with:
 - Same `evaluationId` (groups all runs for comparison)
 - Same `agentVersion`
 - Same `evaluatorNames`
@@ -53,7 +29,7 @@ An experiment consists of:
 
 > **Important:** Use `evaluationId` (NOT `evalId`) to group runs. All runs must be in the same evaluation group for comparison to work.
 
-> ⚠️ **Dataset comparison: score drops are expected.** When comparing v1→v2 datasets, lower scores on the new dataset likely mean the new test cases are harder (better coverage), not that the agent regressed. **Do NOT remove dataset rows or weaken evaluators to recover scores.** Instead, optimize the agent for the new failure patterns, then re-evaluate.
+> ⚠️ **Score drops are expected.** When comparing v1→v2 datasets, lower scores on the new dataset likely mean the new test cases are harder (better coverage), not that the agent regressed. **Do NOT remove dataset rows or weaken evaluators to recover scores.** Instead, optimize the agent for the new failure patterns, then re-evaluate.
 
 ## Step 3 — Compare Results
 
@@ -62,13 +38,13 @@ Use **`evaluation_comparison_create`** with the baseline and treatment runs:
 ```json
 {
   "insightRequest": {
-    "displayName": "Experiment: v2 vs v3 vs v4 on traces-v3",
+    "displayName": "Dataset comparison: traces-v2 vs traces-v3 on agent-v3",
     "state": "NotStarted",
     "request": {
       "type": "EvaluationComparison",
       "evalId": "<eval-group-id>",
-      "baselineRunId": "<v2-run-id>",
-      "treatmentRunIds": ["<v3-run-id>", "<v4-run-id>"]
+      "baselineRunId": "<traces-v2-run-id>",
+      "treatmentRunIds": ["<traces-v3-run-id>"]
     }
   }
 }
@@ -78,30 +54,29 @@ Use **`evaluation_comparison_create`** with the baseline and treatment runs:
 
 Present results as a leaderboard table:
 
-| Evaluator | v2 (baseline) | v3 | v4 | Best |
-|-----------|:---:|:---:|:---:|:---:|
-| Coherence | 3.5 | 4.1 | 4.0 | ✅ v3 |
-| Fluency | 4.2 | 4.4 | 4.5 | ✅ v4 |
-| Relevance | 3.0 | 3.8 | 3.6 | ✅ v3 |
-| Intent Resolution | 3.3 | 4.0 | 4.1 | ✅ v4 |
-| Task Adherence | 2.8 | 3.5 | 3.9 | ✅ v4 |
-| **Wins** | **0** | **2** | **3** | — |
+| Evaluator | traces-v2 (baseline) | traces-v3 | Effect |
+|-----------|:---:|:---:|:---:|
+| Coherence | 4.0 | 3.6 | ⚠️ Lower |
+| Fluency | 4.5 | 4.3 | ⚠️ Lower |
+| Relevance | 3.6 | 3.2 | ⚠️ Lower |
+| Intent Resolution | 4.1 | 3.7 | ⚠️ Lower |
+| Task Adherence | 3.9 | 3.4 | ⚠️ Lower |
 
 ### Recommendation
 
-Based on the comparison:
+If scores drop uniformly across all evaluators, the new dataset is likely harder:
 
-*"v4 wins on 3/5 evaluators (Fluency, Intent Resolution, Task Adherence). v3 wins on 2/5 (Coherence, Relevance). Recommend deploying v4 with additional prompt tuning to recover Relevance."*
+*"Agent v3 scores dropped on traces-v3 across all evaluators. traces-v3 added 15 edge-case queries from production failures. This is expected — optimize the agent for the new failure patterns rather than reverting the dataset."*
 
 ## Pairwise A/B Comparison
 
-For detailed pairwise analysis between exactly two versions:
+For detailed pairwise analysis between exactly two dataset versions:
 
-| Evaluator | Baseline (v2) | Treatment (v3) | Delta | p-value | Effect |
+| Evaluator | Baseline (traces-v2) | Treatment (traces-v3) | Delta | p-value | Effect |
 |-----------|:---:|:---:|:---:|:---:|:---:|
-| Coherence | 3.5 ± 0.8 | 4.1 ± 0.6 | +0.6 | 0.02 | Improved |
-| Fluency | 4.2 ± 0.5 | 4.4 ± 0.4 | +0.2 | 0.15 | Inconclusive |
-| Relevance | 3.0 ± 1.1 | 3.8 ± 0.9 | +0.8 | 0.01 | Improved |
+| Coherence | 4.0 ± 0.6 | 3.6 ± 0.9 | −0.4 | 0.03 | Degraded |
+| Fluency | 4.5 ± 0.4 | 4.3 ± 0.5 | −0.2 | 0.12 | Inconclusive |
+| Relevance | 3.6 ± 0.9 | 3.2 ± 1.1 | −0.4 | 0.04 | Degraded |
 
 > 💡 **Tip:** The `evaluation_comparison_create` result includes `pValue` and `treatmentEffect` fields. Use `pValue < 0.05` as the threshold for statistical significance.
 
@@ -115,7 +90,7 @@ Compare how the same agent version performs across different datasets:
 | synthetic-v2 | 4.3 | 4.6 | 4.1 | May overestimate quality |
 | manual-v1 (curated) | 3.8 | 4.4 | 3.2 | Hardest test cases |
 
-> ⚠️ **Warning:** Be cautious comparing scores across different datasets. Differences may reflect dataset difficulty, not agent quality. Always compare agent versions on the same dataset.
+> ⚠️ **Warning:** Be cautious comparing scores across datasets with different structures (e.g., production traces vs synthetic). Differences may reflect dataset difficulty, not agent quality.
 
 ## Next Steps
 
