@@ -100,6 +100,8 @@ Use `agent_get` MCP tool to determine an agent's type when needed.
 
 ## Additional Resources
 
+- [Standard Agent Setup](references/standard-agent-setup.md) — Standard agent setup configuration reference
+- [Private Network Standard Agent Setup](references/private-network-standard-agent-setup.md) — Standard setup with VNet isolation
 - [Foundry Hosted Agents](https://learn.microsoft.com/azure/ai-foundry/agents/concepts/hosted-agents?view=foundry)
 - [Foundry Agent Runtime Components](https://learn.microsoft.com/azure/ai-foundry/agents/concepts/runtime-components?view=foundry)
 - [Foundry Samples](https://github.com/azure-ai-foundry/foundry-samples)
