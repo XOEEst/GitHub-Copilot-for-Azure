@@ -69,7 +69,7 @@ Every agent source folder should keep Foundry-specific state under `.foundry/`:
 
 ## Agent: Setup References
 
-- [Standard Agent Setup](references/standard-agent-setup.md) - Standard capability-host setup with customer-managed storage, search, and AI Services resources.
+- [Standard Agent Setup](references/standard-agent-setup.md) - Standard capability-host setup with customer-managed data, search, and AI Services resources.
 - [Private Network Standard Agent Setup](references/private-network-standard-agent-setup.md) - Standard setup with VNet isolation and private endpoints.
 
 ## Agent: Project Context Resolution
