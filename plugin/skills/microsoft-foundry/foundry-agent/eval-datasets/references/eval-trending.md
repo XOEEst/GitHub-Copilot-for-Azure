@@ -24,7 +24,7 @@ Then retrieve all runs within the target evaluation group:
 | `evalId` | ✅ | Evaluation group ID |
 | `isRequestForRuns` | ✅ | `true` to list runs |
 
-> ⚠️ **Parameter guardrail:** `evaluation_get` expects `evalId`, not `evaluationId`, even if the runs were grouped earlier with `evaluationId`.
+> ⚠️ **Parameter guardrail:** evaluation_get expects `evalId`, not `evaluationId`, even if the runs were grouped earlier with `evaluationId`.
 
 ## Step 2 — Build Metrics Timeline
 
