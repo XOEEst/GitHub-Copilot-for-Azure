@@ -93,13 +93,14 @@ describe("observe - Unit Tests", () => {
       expect(observeContent).toMatch(/Agent just deployed|Set up evaluation/i);
     });
 
-    test("routes evaluate intent through auto-setup when evaluators missing", () => {
-      expect(observeContent).toMatch(/evaluators\/.*empty|check.*evaluators/i);
+    test("routes evaluate intent through auto-setup when cache is missing or stale", () => {
+      expect(observeContent).toMatch(/cache is missing|stale|refresh|check.*evaluators/i);
     });
 
     test("warns to check for existing evaluators before evaluation", () => {
-      expect(observeContent).toContain("evaluators/");
-      expect(observeContent).toContain("datasets/");
+      expect(observeContent).toContain(".foundry/agent-metadata.yaml");
+      expect(observeContent).toContain(".foundry/evaluators/");
+      expect(observeContent).toContain(".foundry/datasets/");
       expect(observeContent).toMatch(/auto-setup|Auto-Setup/i);
     });
   });
@@ -152,8 +153,9 @@ describe("observe - Unit Tests", () => {
     });
 
     test("includes artifact persistence structure", () => {
-      expect(setupContent).toContain("evaluators/");
-      expect(setupContent).toContain("datasets/");
+      expect(setupContent).toContain(".foundry/agent-metadata.yaml");
+      expect(setupContent).toContain(".foundry/evaluators/");
+      expect(setupContent).toContain(".foundry/datasets/");
       expect(setupContent).toContain(".yaml");
       expect(setupContent).toContain(".jsonl");
     });
@@ -188,9 +190,26 @@ describe("observe - Unit Tests", () => {
     });
 
     test("requires persisting eval artifacts", () => {
-      expect(observeContent).toContain("evaluators/");
-      expect(observeContent).toContain("datasets/");
-      expect(observeContent).toContain("results/");
+      expect(observeContent).toContain(".foundry/evaluators/");
+      expect(observeContent).toContain(".foundry/datasets/");
+      expect(observeContent).toContain(".foundry/results/");
+      expect(observeContent).toContain("P0");
+    });
+
+    test("documents evalId versus evaluationId guardrail", () => {
+      const evaluateContent = fs.readFileSync(
+        path.join(REFERENCES_PATH, "evaluate-step.md"),
+        "utf-8"
+      );
+      const compareContent = fs.readFileSync(
+        path.join(REFERENCES_PATH, "compare-iterate.md"),
+        "utf-8"
+      );
+
+      expect(evaluateContent).toContain("evaluationId");
+      expect(evaluateContent).toContain("evalId");
+      expect(evaluateContent).toMatch(/evaluation_get.*does\s+\*\*not\*\*\s+accept\s+`evaluationId`/i);
+      expect(compareContent).toMatch(/creation uses `evaluationId`.*`evaluation_get`.*`evalId`/i);
     });
   });
 });

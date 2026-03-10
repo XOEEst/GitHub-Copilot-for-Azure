@@ -15,8 +15,8 @@ An experiment consists of:
 | Parameter | Value | Example |
 |-----------|-------|---------|
 | Agent | Pinned agent version | `v3` |
-| Baseline dataset | Previous dataset version | `support-bot-traces-v2` |
-| Treatment dataset(s) | New dataset version(s) | `support-bot-traces-v3` |
+| Baseline dataset | Previous dataset version | `support-bot-prod-traces-v2` |
+| Treatment dataset(s) | New dataset version(s) | `support-bot-prod-traces-v3` |
 | Evaluators | Same set for all runs | coherence, fluency, relevance, intent_resolution, task_adherence |
 
 ## Step 2 — Run Evaluations
@@ -27,7 +27,7 @@ For each dataset version, run **`evaluation_agent_batch_eval_create`** with:
 - Same `evaluatorNames`
 - Different `inputData` (from each dataset version)
 
-> **Important:** Use `evaluationId` (NOT `evalId`) to group runs. All runs must be in the same evaluation group for comparison to work.
+> **Important:** Use `evaluationId` on `evaluation_agent_batch_eval_create` to group runs. After the runs exist, switch to `evalId` for `evaluation_get` and `evaluation_comparison_create`.
 
 > ⚠️ **Score drops are expected.** When comparing v1→v2 datasets, lower scores on the new dataset likely mean the new test cases are harder (better coverage), not that the agent regressed. **Do NOT remove dataset rows or weaken evaluators to recover scores.** Instead, optimize the agent for the new failure patterns, then re-evaluate.
 
@@ -49,6 +49,8 @@ Use **`evaluation_comparison_create`** with the baseline and treatment runs:
   }
 }
 ```
+
+> ⚠️ **Common mistake:** `evaluation_comparison_create` uses `insightRequest.request.evalId`, not `evaluationId`, even when the runs were originally grouped with `evaluationId`.
 
 ## Step 4 — Leaderboard
 
