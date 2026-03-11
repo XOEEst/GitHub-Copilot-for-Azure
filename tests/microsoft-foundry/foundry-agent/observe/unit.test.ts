@@ -148,8 +148,11 @@ describe("observe - Unit Tests", () => {
       expect(setupContent).toContain("self_harm");
     });
 
-    test("includes LLM-judge deployment step", () => {
+    test("includes judge deployment step based on actual project deployments", () => {
       expect(setupContent).toContain("model_deployment_get");
+      expect(setupContent).toMatch(/actual model deployments/i);
+      expect(setupContent).toMatch(/supports chat completions/i);
+      expect(setupContent).toMatch(/do\s+\*\*not\*\*\s+assume\s+`gpt-4o`\s+exists/i);
     });
 
     test("includes artifact persistence structure", () => {
@@ -210,6 +213,32 @@ describe("observe - Unit Tests", () => {
       expect(evaluateContent).toContain("evalId");
       expect(evaluateContent).toMatch(/evaluation_get.*does\s+\*\*not\*\*\s+accept\s+`evaluationId`/i);
       expect(compareContent).toMatch(/creation uses `evaluationId`.*`evaluation_get`.*`evalId`/i);
+    });
+
+    test("requires judge deployment lookup instead of assuming gpt-4o", () => {
+      const evaluateContent = fs.readFileSync(
+        path.join(REFERENCES_PATH, "evaluate-step.md"),
+        "utf-8"
+      );
+
+      expect(evaluateContent).toContain("model_deployment_get");
+      expect(evaluateContent).toMatch(/supports chat completions/i);
+      expect(evaluateContent).toMatch(/do\s+\*\*not\*\*\s+assume\s+`gpt-4o`\s+exists/i);
+    });
+
+    test("documents eval group immutability for evaluators and thresholds", () => {
+      const evaluateContent = fs.readFileSync(
+        path.join(REFERENCES_PATH, "evaluate-step.md"),
+        "utf-8"
+      );
+      const compareContent = fs.readFileSync(
+        path.join(REFERENCES_PATH, "compare-iterate.md"),
+        "utf-8"
+      );
+
+      expect(evaluateContent).toMatch(/new evaluation group/i);
+      expect(evaluateContent).toMatch(/thresholds/i);
+      expect(compareContent).toMatch(/reuse the same `evaluationId` only when `evaluatorNames` and thresholds are unchanged/i);
     });
   });
 });

@@ -27,6 +27,10 @@ Use **`evaluation_agent_batch_eval_create`** to run the selected test case's eva
 
 **Fallback only — server-side synthetic data:** Set `generateSyntheticData=true` and provide `generationModelDeploymentName`. Only use this when the local cache is missing and the user explicitly requests a refresh-free synthetic run.
 
+## Resolve Judge Deployment
+
+Before setting `deploymentName`, use **`model_deployment_get`** to list the selected project's actual model deployments. Choose a deployment that supports chat completions and use that deployment name for quality evaluators. Do **not** assume `gpt-4o` exists. If the project has no chat-completions-capable deployment, stop and tell the user quality evaluators cannot run until one is available.
+
 ### Additional Parameters
 
 | Parameter | When Needed |
@@ -36,6 +40,8 @@ Use **`evaluation_agent_batch_eval_create`** to run the selected test case's eva
 | `evaluationName` | Name for a new evaluation group; include environment and test-case ID |
 
 > **Important:** Use `evaluationId` on `evaluation_agent_batch_eval_create` (not `evalId`) to group runs. Run `P0` test cases first unless the user chooses a broader priority band.
+
+> ⚠️ **Eval-group immutability:** Reuse an existing `evaluationId` only when the dataset comparison setup is unchanged for that group: same evaluator list and same thresholds. If evaluator definitions or thresholds change, create a **new** evaluation group instead of adding another run to the old one.
 
 ## Parameter Naming Guardrail
 

@@ -29,6 +29,8 @@ For each dataset version, run **`evaluation_agent_batch_eval_create`** with:
 
 > **Important:** Use `evaluationId` on `evaluation_agent_batch_eval_create` to group runs. After the runs exist, switch to `evalId` for `evaluation_get` and `evaluation_comparison_create`.
 
+> ⚠️ **Eval-group immutability:** Keep the evaluator set and thresholds fixed within one evaluation group. If you need to change evaluators or thresholds, create a new evaluation group instead of reusing the previous `evaluationId`.
+
 > ⚠️ **Score drops are expected.** When comparing v1→v2 datasets, lower scores on the new dataset likely mean the new test cases are harder (better coverage), not that the agent regressed. **Do NOT remove dataset rows or weaken evaluators to recover scores.** Instead, optimize the agent for the new failure patterns, then re-evaluate.
 
 ## Step 3 — Compare Results

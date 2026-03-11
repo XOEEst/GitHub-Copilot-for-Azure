@@ -79,6 +79,21 @@ describe("eval-datasets - Unit Tests", () => {
       expect(comparisonContent).toMatch(/switch to `evalId`/i);
       expect(trendingContent).toMatch(/evaluation_get expects `evalId`, not `evaluationId`/i);
     });
+
+    test("documents eval group immutability for evaluator and threshold changes", () => {
+      const comparisonContent = fs.readFileSync(
+        path.join(REFERENCES_PATH, "dataset-comparison.md"),
+        "utf-8"
+      );
+      const trendingContent = fs.readFileSync(
+        path.join(REFERENCES_PATH, "eval-trending.md"),
+        "utf-8"
+      );
+
+      expect(comparisonContent).toMatch(/create a new evaluation group/i);
+      expect(comparisonContent).toMatch(/thresholds/i);
+      expect(trendingContent).toMatch(/evaluator set and thresholds stayed fixed/i);
+    });
   });
 
   describe("Reference Files Exist", () => {

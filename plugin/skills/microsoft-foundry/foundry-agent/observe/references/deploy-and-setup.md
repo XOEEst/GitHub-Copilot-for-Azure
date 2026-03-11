@@ -46,11 +46,11 @@ Use **`evaluator_catalog_create`** with the selected environment's project endpo
 
 ### 5. Identify LLM-Judge Deployment
 
-Use **`model_deployment_get`** to find a suitable model (for example, `gpt-4o`) for quality evaluators.
+Use **`model_deployment_get`** to list the selected project's actual model deployments, then choose one that supports chat completions for quality evaluators. Do **not** assume `gpt-4o` exists in the project. If no deployment supports chat completions, stop the setup flow and explain that quality evaluators need a compatible judge deployment.
 
 ### 6. Generate Local Test Dataset
 
-Use the identified LLM deployment to generate realistic test queries based on the agent's instructions and tool capabilities. Save to `.foundry/datasets/<agent-name>-<environment>-test-v1.jsonl` with each line containing at minimum a `query` field (optionally `context`, `ground_truth`).
+Use the identified chat-capable deployment to generate realistic test queries based on the agent's instructions and tool capabilities. Save to `.foundry/datasets/<agent-name>-<environment>-test-v1.jsonl` with each line containing at minimum a `query` field (optionally `context`, `ground_truth`).
 
 ### 7. Persist Artifacts and Test Cases
 

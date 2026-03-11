@@ -6,6 +6,7 @@ exports[`microsoft-foundry - Trigger Tests Trigger Keywords Snapshot skill descr
   "extractedKeywords": [
     "agent",
     "agents",
+    "ai",
     "assignment",
     "availability",
     "azure",
@@ -73,6 +74,7 @@ exports[`microsoft-foundry - Trigger Tests Trigger Keywords Snapshot skill keywo
 [
   "agent",
   "agents",
+  "ai",
   "assignment",
   "availability",
   "azure",

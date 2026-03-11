@@ -107,8 +107,11 @@ describe("deploy - Unit Tests", () => {
       expect(deployContent).toContain("coherence");
     });
 
-    test("instructs identifying LLM-judge deployment", () => {
+    test("instructs identifying judge deployment from actual project deployments", () => {
       expect(deployContent).toContain("model_deployment_get");
+      expect(deployContent).toMatch(/actual model deployments/i);
+      expect(deployContent).toMatch(/supports chat completions/i);
+      expect(deployContent).toMatch(/do\s+\*\*not\*\*\s+assume\s+`gpt-4o`\s+exists/i);
     });
 
     test("instructs persisting artifacts to .foundry/evaluators/ and .foundry/datasets/", () => {
