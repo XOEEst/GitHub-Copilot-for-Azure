@@ -77,6 +77,13 @@ describe(`${SKILL_NAME} - Unit Tests`, () => {
       expect(skill.content).toContain("AZURE_AI_PROJECT_ENDPOINT");
       expect(skill.content).toContain("AZURE_CONTAINER_REGISTRY_NAME");
     });
+
+    test("documents .foundry workspace standard", () => {
+      expect(skill.content).toContain(".foundry/agent-metadata.yaml");
+      expect(skill.content).toContain("defaultEnvironment");
+      expect(skill.content).toContain("Agent Metadata Contract");
+    });
+
   });
 
   describe("Sub-Skills Reference", () => {

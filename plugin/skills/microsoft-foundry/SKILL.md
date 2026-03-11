@@ -4,7 +4,7 @@ description: "Deploy, evaluate, and manage Foundry agents end-to-end: Docker bui
 license: MIT
 metadata:
   author: Microsoft
-  version: "1.0.3"
+  version: "1.0.4"
 ---
 
 # Microsoft Foundry Skill
@@ -54,31 +54,79 @@ Match user intent to the correct workflow. Read each sub-skill in order before e
 | Optimize / improve agent prompt or instructions | [observe](foundry-agent/observe/observe.md) (Step 4: Optimize) |
 | Evaluate agent quality and optimize (full loop) | [observe](foundry-agent/observe/observe.md) |
 
+## Agent: .foundry Workspace Standard
+
+Every agent source folder should keep Foundry-specific state under `.foundry/`:
+
+```text
+<agent-root>/
+  .foundry/
+    agent-metadata.yaml
+    datasets/
+    evaluators/
+    results/
+```
+
+- `agent-metadata.yaml` is the required source of truth for environment-specific project settings, agent names, registry details, and evaluation test cases.
+- `datasets/` and `evaluators/` are local cache folders. Reuse them when they are current, and ask before refreshing or overwriting them.
+- See [Agent Metadata Contract](references/agent-metadata-contract.md) for the canonical schema and workflow rules.
+
+## Agent: Setup References
+
+- [Standard Agent Setup](references/standard-agent-setup.md) - Standard capability-host setup with customer-managed data, search, and AI Services resources.
+- [Private Network Standard Agent Setup](references/private-network-standard-agent-setup.md) - Standard setup with VNet isolation and private endpoints.
+
 ## Agent: Project Context Resolution
 
-Agent skills should run this step **only when they need configuration values they don't already have**. If a value (e.g., project endpoint, agent name) is already known from the user's message or a previous skill in the same session, skip resolution for that value.
+Agent skills should run this step **only when they need configuration values they don't already have**. If a value (for example, agent root, environment, project endpoint, or agent name) is already known from the user's message or a previous skill in the same session, skip resolution for that value.
 
-### Step 1: Detect azd Project
+### Step 1: Discover Agent Roots
 
-If any required configuration value is missing, check if `azure.yaml` exists in the project root (workspace root or user-specified project path). If found, run `azd env get-values` to load environment variables.
+Search the workspace for `.foundry/agent-metadata.yaml`.
 
-### Step 2: Resolve Common Configuration
+- **One match** → use that agent root.
+- **Multiple matches** → require the user to choose the target agent folder.
+- **No matches** → for create/deploy workflows, seed a new `.foundry/` folder during setup; for all other workflows, stop and ask the user which agent source folder to initialize.
 
-Match missing values against the azd environment:
+### Step 2: Resolve Environment
 
-| azd Variable | Resolves To | Used By |
-|-------------|-------------|---------|
-| `AZURE_AI_PROJECT_ENDPOINT` or `AZURE_AIPROJECT_ENDPOINT` | Project endpoint | deploy, invoke, troubleshoot |
-| `AZURE_CONTAINER_REGISTRY_NAME` or `AZURE_CONTAINER_REGISTRY_ENDPOINT` | ACR registry name / image URL prefix | deploy |
-| `AZURE_SUBSCRIPTION_ID` | Azure subscription | troubleshoot |
+Read `.foundry/agent-metadata.yaml` and resolve the environment in this order:
+1. Environment explicitly named by the user
+2. Environment already selected earlier in the session
+3. `defaultEnvironment` from metadata
 
-### Step 3: Collect Missing Values
+If the metadata contains multiple environments and none of the rules above selects one, prompt the user to choose. Keep the selected agent root and environment visible in every workflow summary.
 
-Use the `ask_user` or `askQuestions` tool **only for values not resolved** from the user's message, session context, or azd environment. Common values skills may need:
+### Step 3: Resolve Common Configuration
+
+Use the selected environment in `agent-metadata.yaml` as the primary source:
+
+| Metadata Field | Resolves To | Used By |
+|----------------|-------------|---------|
+| `environments.<env>.projectEndpoint` | Project endpoint | deploy, invoke, observe, trace, troubleshoot |
+| `environments.<env>.agentName` | Agent name | invoke, observe, trace, troubleshoot |
+| `environments.<env>.azureContainerRegistry` | ACR registry name / image URL prefix | deploy |
+| `environments.<env>.testCases[]` | Dataset + evaluator + threshold bundles | observe, eval-datasets |
+
+### Step 4: Bootstrap Missing Metadata (Create/Deploy Only)
+
+If create/deploy is initializing a new `.foundry` workspace and metadata fields are still missing, check if `azure.yaml` exists in the project root. If found, run `azd env get-values` and use it to seed `agent-metadata.yaml` before continuing.
+
+| azd Variable | Seeds |
+|-------------|-------|
+| `AZURE_AI_PROJECT_ENDPOINT` or `AZURE_AIPROJECT_ENDPOINT` | `environments.<env>.projectEndpoint` |
+| `AZURE_CONTAINER_REGISTRY_NAME` or `AZURE_CONTAINER_REGISTRY_ENDPOINT` | `environments.<env>.azureContainerRegistry` |
+| `AZURE_SUBSCRIPTION_ID` | Azure subscription for trace/troubleshoot lookups |
+
+### Step 5: Collect Missing Values
+
+Use the `ask_user` or `askQuestions` tool **only for values not resolved** from the user's message, session context, metadata, or azd bootstrap. Common values skills may need:
+- **Agent root** — Target folder containing `.foundry/agent-metadata.yaml`
+- **Environment** — `dev`, `prod`, or another environment key from metadata
 - **Project endpoint** — AI Foundry project endpoint URL
 - **Agent name** — Name of the target agent
 
-> 💡 **Tip:** If the user provides a project endpoint or agent name in their initial message, extract it directly — do not ask again.
+> 💡 **Tip:** If the user already provides the agent path, environment, project endpoint, or agent name, extract it directly — do not ask again.
 
 ## Agent: Agent Types
 
