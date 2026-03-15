@@ -89,7 +89,7 @@ Register the generated dataset in Foundry. Follow these sub-steps:
 1. Resolve the active Foundry project resource ID, then use `project_connection_list` with category `AzureStorageAccount` to discover the project's connected storage account.
 2. Upload the JSONL file to `https://<storage-account>.blob.core.windows.net/eval-datasets/<agent-name>/<agent-name>-eval-seed-v1.jsonl`.
 3. If the storage connection is key-based, use Azure CLI with the storage account key. If AAD-based, prefer `--auth-mode login`.
-4. Register with `evaluation_dataset_create`, including `tags` to persist metadata directly on the Foundry dataset:
+4. Register with `evaluation_dataset_create`, always including `connectionName` so the dataset is bound to the discovered `AzureStorageAccount` project connection:
 
 ```
 evaluation_dataset_create(
@@ -98,12 +98,15 @@ evaluation_dataset_create(
   connectionName: "<storage-connection-name>",
   datasetName: "<agent-name>-eval-seed",
   datasetVersion: "v1",
-  description: "Seed dataset for <agent-name>; <row-count> queries; covers <category-list>",
-  tags: {"agent": "<agent-name>", "stage": "seed", "version": "v1"}
+  description: "Seed dataset for <agent-name>; <row-count> queries; covers <category-list>"
 )
 ```
 
-5. Save the returned `datasetUri` in both `agent-metadata.yaml` (under the active test case) and `.foundry/datasets/manifest.json`.
+5. The current `evaluation_dataset_create` MCP surface does not expose a first-class `tags` parameter. Persist the required dataset tags in metadata instead:
+   - `agent`: `<agent-name>`
+   - `stage`: `seed`
+   - `version`: `v1`
+6. Save the returned `datasetUri` in both `agent-metadata.yaml` (under the active test case) and `.foundry/datasets/manifest.json`.
 
 ## Step 4 — Update Metadata
 

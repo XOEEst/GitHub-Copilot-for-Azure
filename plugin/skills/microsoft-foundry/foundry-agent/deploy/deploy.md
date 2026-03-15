@@ -238,6 +238,7 @@ After a successful deployment, persist the deployment context to `<agent-root>/.
 | `environments.<env>.agentName` | Deployed agent name | `my-support-agent` |
 | `environments.<env>.azureContainerRegistry` | ACR resource (hosted agents) | `myregistry.azurecr.io` |
 | `environments.<env>.testCases[]` | Evaluation bundles for datasets, evaluators, and thresholds | `smoke-core`, `trace-regressions` |
+| `environments.<env>.testCases[].datasetUri` | Remote Foundry dataset URI for shared eval workflows | `azureml://datastores/.../paths/...` |
 
 If `agent-metadata.yaml` already exists, merge the selected environment instead of overwriting other environments or cached test cases without confirmation.
 
@@ -281,7 +282,7 @@ If Phase 2 is needed, call `evaluator_catalog_get` again to reuse an existing cu
 
 Use **`model_deployment_get`** to list the selected project's actual model deployments, then choose one that supports chat completions for quality evaluators. Do **not** assume `gpt-4o` exists in the project. If no deployment supports chat completions, stop the auto-setup flow and tell the user quality evaluators cannot run until a compatible judge deployment is available.
 
-### 5. Generate Seed Dataset and Register in Foundry
+### 5. Generate Seed Dataset
 
 > ⚠️ **MANDATORY: Read the full generation workflow before proceeding.**
 
@@ -294,6 +295,44 @@ Read and follow [Generate Seed Evaluation Dataset](../eval-datasets/references/g
 
 Do NOT skip the `expected_behavior` field. The generation reference handles the complete flow from query generation through Foundry registration.
 
+The local filename must start with the selected environment's Foundry agent name (`agentName` in `agent-metadata.yaml`) before adding stage, environment, or version suffixes.
+
+### 5.5 Register Dataset in Foundry
+
+After saving the seed dataset locally, register it in Foundry so shared evaluation workflows and CI/CD pipelines can reuse it from the start.
+
+1. Resolve the active Foundry project resource ID from the deployment context, then use `project_connection_list` with category `AzureStorageAccount` to discover the project's connected Azure storage account for dataset upload.
+2. Upload the JSONL file to `https://<storage-account>.blob.core.windows.net/eval-datasets/<agent-name>/<agent-name>-eval-seed-v1.jsonl`.
+3. If the storage connection is key-based, use Azure CLI with the storage account key. If it is AAD-based, prefer `--auth-mode login`.
+
+```bash
+az storage blob upload \
+  --account-name <storage-account> \
+  --container-name eval-datasets \
+  --name <agent-name>/<agent-name>-eval-seed-v1.jsonl \
+  --file .foundry/datasets/<agent-name>-eval-seed-v1.jsonl \
+  --account-key <storage-account-key>
+```
+
+4. Register Dataset in Foundry with `evaluation_dataset_create`, always including `connectionName` so the dataset is bound to the discovered project connection:
+
+```
+evaluation_dataset_create(
+  projectEndpoint: "<project-endpoint>",
+  datasetContentUri: "https://<storage-account>.blob.core.windows.net/eval-datasets/<agent-name>/<agent-name>-eval-seed-v1.jsonl",
+  connectionName: "<storage-connection-name>",
+  datasetName: "<agent-name>-eval-seed",
+  datasetVersion: "v1",
+  description: "Seed dataset for <agent-name>; <query-count> queries; covers <category-list>"
+)
+```
+
+5. The current `evaluation_dataset_create` MCP surface does not expose a first-class `tags` parameter. Persist the required dataset tags in metadata using:
+   - `agent`: `<agent-name>`
+   - `stage`: `seed`
+   - `version`: `v1`
+6. Save the returned `datasetUri` in `agent-metadata.yaml` alongside the local `datasetFile`, the remote dataset name/version, and the tag values so both local and remote references stay aligned.
+
 ### 6. Persist Artifacts and Test Cases
 
 Save evaluator definitions, local datasets, and evaluation outputs under `.foundry/`, then register or update test cases in `agent-metadata.yaml` for the selected environment:
@@ -304,11 +343,11 @@ Save evaluator definitions, local datasets, and evaluation outputs under `.found
   evaluators/
     <name>.yaml
   datasets/
-    <agent-name>-<environment>-test-v1.jsonl
+    <agent-name>-eval-seed-v1.jsonl
   results/
 ```
 
-Each test case should bundle one dataset with the evaluator list, thresholds, and a priority tag (`P0`, `P1`, or `P2`). For simplicity, seed exactly one `P0` smoke test case after deployment.
+Each test case should bundle one dataset with the evaluator list, thresholds, and a priority tag (`P0`, `P1`, or `P2`). Persist the local `datasetFile` and remote `datasetUri` together, and seed exactly one `P0` smoke test case after deployment.
 
 ### 7. Prompt User
 

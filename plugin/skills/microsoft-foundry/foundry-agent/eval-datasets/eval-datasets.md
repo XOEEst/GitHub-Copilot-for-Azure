@@ -92,7 +92,7 @@ Required metadata to track with every registered dataset:
 - `version`: version string such as `v1`, `v2`, or `v3`
 - `datasetUri`: always persist the Foundry dataset URI in `agent-metadata.yaml` alongside the local `datasetFile`, dataset name, and version
 
-> 💡 **Tip:** `evaluation_dataset_create` supports a `tags` parameter (string key-value dictionary). Always pass `agent`, `stage`, and `version` as tags when registering a dataset so Foundry-side metadata stays aligned with local `.foundry/datasets/manifest.json` and `agent-metadata.yaml`.
+> 💡 **Tip:** `evaluation_dataset_create` does not expose a first-class `tags` parameter in the current MCP surface. Persist `agent`, `stage`, and `version` in local metadata (`agent-metadata.yaml` and `.foundry/datasets/manifest.json`) so Foundry-side references stay aligned with the cache.
 
 ## Related Skills
 
